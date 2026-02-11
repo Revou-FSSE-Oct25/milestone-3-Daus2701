@@ -1,51 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import ProductGrid from "./about/components/ProductGrid";
-import type { Product } from "./about/components/ProductCard";
-
-
+import { useProducts } from "../hooks/useProducts";
 
 export default function Home() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>("");
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    async function loadProducts() {
-      try {
-        setLoading(true);
-        setError("");
-
-        const res = await fetch("https://api.escuelajs.co/api/v1/products", {
-          signal: controller.signal,
-        });
-
-        if (!res.ok) throw new Error("Failed to fetch products");
-
-        const data: Product[] = await res.json();
-        setProducts(data);
-      } catch (err: any) {
-        if (err?.name === "AbortError") return;
-        setError(err?.message ?? "Something went wrong");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadProducts();
-    return () => controller.abort();
-  }, []);
+  const { products, loading, error, refetch } = useProducts();
 
   return (
     <main className="p-6">
-      <h1 className="text-3xl font-bold">Revo Shop</h1>
-      <p className="mt-2 text-white/70">Browse products from the API.</p>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">Revo Shop</h1>
+        <p className="mt-1 text-white/70">Browse products from the API.</p>
+      </div>
 
-      {loading && <p className="mt-6 text-white/70">Loading products…</p>}
-      {error && <p className="mt-6 text-red-400">{error}</p>}
+      {loading && <p className="text-white/70">Loading products...</p>}
+
+      {!loading && error && (
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4">
+          <p className="font-semibold text-red-200">Failed to load products</p>
+          <p className="mt-1 text-red-200/80">{error}</p>
+          <button
+            onClick={refetch}
+            className="mt-3 rounded-md bg-white/10 px-3 py-2 hover:bg-white/20"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {!loading && !error && <ProductGrid products={products} />}
     </main>

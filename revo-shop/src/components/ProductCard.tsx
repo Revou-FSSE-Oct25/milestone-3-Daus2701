@@ -8,7 +8,7 @@ export type Product = {
   images: string[];
 };
 
-const FALLBACK_IMG = "https://placehold.co/800x800/png?text=No+Image";
+const FALLBACK_IMG = "https://placehold.co/300x300/png";
 
 function getSafeImageUrl(images: string[] | undefined): string {
   const raw = images?.[0];

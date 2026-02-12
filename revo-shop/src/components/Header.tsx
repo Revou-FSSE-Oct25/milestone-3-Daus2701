@@ -1,39 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-
-function NavLink({ href, label }: { href: string; label: string }) {
-  const pathname = usePathname();
-  const isActive = pathname === href;
-
-  return (
-    <Link
-      href={href}
-      className={[
-        "text-sm transition",
-        isActive ? "text-white font-semibold" : "text-white/70 hover:text-white",
-      ].join(" ")}
-      aria-current={isActive ? "page" : undefined}
-    >
-      {label}
-    </Link>
-  );
-}
+import { useCart } from "@/context/CartContext";
 
 export default function Header() {
+  const { totalItems } = useCart();
+
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/60 backdrop-blur">
-      <div className="mx-auto max-w-5xl px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-lg font-bold tracking-tight">
+    <header className="border-b border-white/10">
+      <nav className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="font-bold">
           Revo Shop
         </Link>
 
-        <nav className="flex gap-4">
-          <NavLink href="/" label="Home" />
-          <NavLink href="/about" label="About" />
-        </nav>
-      </div>
+        <div className="flex items-center gap-6">
+          <Link href="/">Home</Link>
+          <Link href="/about">About</Link>
+
+          <Link href="/cart" className="relative">
+            Cart
+            {totalItems > 0 && (
+              <span className="ml-2 inline-flex min-w-[20px] h-5 items-center justify-center rounded-full bg-white text-black text-xs px-2">
+                {totalItems}
+              </span>
+            )}
+          </Link>
+        </div>
+      </nav>
     </header>
   );
 }

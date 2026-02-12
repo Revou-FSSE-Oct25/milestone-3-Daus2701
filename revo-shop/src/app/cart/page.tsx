@@ -1,88 +1,108 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 
+const FALLBACK_IMG = "https://placehold.co/200x200/png?text=No+Image";
+
 export default function CartPage() {
-  const { items, subtotal, inc, dec, removeFromCart, clear } = useCart();
+  const { items, inc, dec, remove, clear, totalItems, totalPrice } = useCart();
 
   return (
-    <main className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Your Cart</h1>
+    <main className="p-6">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white">Your Cart</h1>
+          <p className="mt-1 text-white/70">{totalItems} item(s)</p>
+        </div>
+
         {items.length > 0 && (
-          <button
-            onClick={clear}
-            className="rounded-md border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10"
-          >
-            Clear
+          <button onClick={clear} className="rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/15">
+            Clear cart
           </button>
         )}
       </div>
 
       {items.length === 0 ? (
         <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-          <p className="text-white/70">Cart is empty.</p>
-          <Link className="inline-block mt-4 underline" href="/">
-            Go shopping →
+          <p className="text-white/80">Cart is empty.</p>
+          <Link className="mt-3 inline-block rounded-lg bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/15" href="/">
+            Browse products
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-xl border border-white/10 bg-white/5 p-4 flex items-center justify-between gap-4"
-            >
-              <div className="min-w-0">
-                <p className="font-semibold truncate">{item.title}</p>
-                <p className="text-white/70 text-sm">${item.price}</p>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-4">
+            {items.map((item) => (
+              <div key={item.id} className="flex gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                <div className="h-20 w-20 overflow-hidden rounded-lg bg-white/5">
+                  <Image
+                    src={item.image ?? FALLBACK_IMG}
+                    alt={item.title}
+                    width={200}
+                    height={200}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+
+                <div className="flex-1">
+                  <p className="font-semibold text-white">{item.title}</p>
+                  <p className="text-sm text-white/70">${item.price}</p>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => dec(item.id)}
+                        className="h-8 w-8 rounded-md bg-white/10 text-white hover:bg-white/15"
+                      >
+                        -
+                      </button>
+                      <span className="min-w-[2ch] text-center text-white">{item.qty}</span>
+                      <button
+                        onClick={() => inc(item.id)}
+                        className="h-8 w-8 rounded-md bg-white/10 text-white hover:bg-white/15"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <p className="text-white">
+                        ${(item.price * item.qty).toFixed(2)}
+                      </p>
+                      <button onClick={() => remove(item.id)} className="text-sm text-red-300 hover:text-red-200">
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => dec(item.id)}
-                  className="w-9 h-9 rounded-md border border-white/10 bg-white/5 hover:bg-white/10"
-                >
-                  −
-                </button>
-                <span className="w-10 text-center">{item.quantity}</span>
-                <button
-                  onClick={() => inc(item.id)}
-                  className="w-9 h-9 rounded-md border border-white/10 bg-white/5 hover:bg-white/10"
-                >
-                  +
-                </button>
-
-                <button
-                  onClick={() => removeFromCart(item.id)}
-                  className="ml-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 hover:bg-red-500/20"
-                >
-                  Remove
-                </button>
-              </div>
-
-              <div className="text-right min-w-[100px]">
-                <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
-                <p className="text-white/60 text-xs">line total</p>
-              </div>
-            </div>
-          ))}
-
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex items-center justify-between">
-            <div>
-              <p className="text-white/70">Subtotal</p>
-              <p className="text-2xl font-bold">${subtotal.toFixed(2)}</p>
-            </div>
-
-            {/* We'll protect this later with middleware */}
-            <Link
-              href="/checkout"
-              className="rounded-md bg-white text-black px-4 py-2 font-semibold hover:opacity-90"
-            >
-              Checkout →
-            </Link>
+            ))}
           </div>
+
+          <aside className="h-fit rounded-xl border border-white/10 bg-white/5 p-4">
+            <h2 className="text-lg font-semibold text-white">Summary</h2>
+            <div className="mt-3 flex justify-between text-white/80">
+              <span>Items</span>
+              <span>{totalItems}</span>
+            </div>
+            <div className="mt-2 flex justify-between text-white/80">
+              <span>Total</span>
+              <span className="text-white font-semibold">${totalPrice.toFixed(2)}</span>
+            </div>
+
+            <button
+              className="mt-4 w-full rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black hover:opacity-90"
+              onClick={() => alert("Checkout page next 👀")}
+            >
+              Checkout
+            </button>
+
+            <p className="mt-3 text-xs text-white/50">
+              (Checkout will be protected later with auth + middleware)
+            </p>
+          </aside>
         </div>
       )}
     </main>

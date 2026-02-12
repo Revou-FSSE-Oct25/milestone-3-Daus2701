@@ -3,21 +3,30 @@
 import { useCart } from "@/context/CartContext";
 
 type Props = {
-  id: number;
-  title: string;
-  price: number;
-  image?: string;
+  product: {
+    id: number;
+    title: string;
+    price: number;
+    image?: string | null;
+  };
 };
 
-export default function AddToCartButton({ id, title, price, image }: Props) {
+export default function AddToCartButton({ product }: Props) {
   const { addToCart } = useCart();
 
   return (
     <button
-      onClick={() => addToCart({ id, title, price, image }, 1)}
-      className="rounded-md bg-white text-black px-4 py-2 font-semibold hover:opacity-90"
+      onClick={() =>
+        addToCart({
+          id: product.id,
+          title: product.title,
+          price: product.price,
+          image: product.image ?? undefined,
+        })
+      }
+      className="mt-4 rounded-lg bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/15"
     >
-      Add to Cart
+      Add to cart
     </button>
   );
 }

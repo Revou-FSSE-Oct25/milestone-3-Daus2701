@@ -1,4 +1,5 @@
 import Image from "next/image";
+import AddToCartButton from "@/components/AddToCartButton";
 
 type Product = {
   id: number;
@@ -8,52 +9,46 @@ type Product = {
   images: string[];
 };
 
-export default async function ProductDetail({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+const FALLBACK_IMG = "https://placehold.co/800x800/png?text=No+Image"; // <-- png avoids SVG warning
 
-  const res = await fetch(`https://api.escuelajs.co/api/v1/products/${id}`, {
-    cache: "no-store",
-  });
+export default async function ProductDetail({ params }: { params: { id: string } }) {
+  const { id } = params;
+
+  const res = await fetch(`https://api.escuelajs.co/api/v1/products/${id}`, { cache: "no-store" });
 
   if (!res.ok) {
     return (
       <main className="p-6">
         <h1 className="text-2xl font-bold">Product not found</h1>
-        <p className="mt-2 text-gray-600">Could not load product with id: {id}</p>
+        <p className="mt-2 text-white/70">Could not load product with id: {id}</p>
       </main>
     );
   }
 
   const product: Product = await res.json();
-  const image =
-    product.images && product.images.length > 0
-    ? product.images[0]
-    : null;
+  const image = product.images?.[0] ?? FALLBACK_IMG;
 
   return (
     <main className="p-6">
-      <h1 className="text-3xl font-bold">{product.title}</h1>
-      <p className="mt-2 text-gray-300">${product.price}</p>
+      <h1 className="text-3xl font-bold text-white">{product.title}</h1>
+      <p className="mt-2 text-white/70">${product.price}</p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="aspect-square overflow-hidden rounded-lg bg-white/5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+        <div className="aspect-square overflow-hidden rounded-xl bg-white/5">
           <Image
-                src={image || "https://placehold.co/800x800?text=No+Image"}
-                alt={product.title}
-                width={800}
-                height={800}
-                className="h-full w-full object-cover"
-            />
+            src={image}
+            alt={product.title}
+            width={800}
+            height={800}
+            className="h-full w-full object-cover"
+          />
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold">Description</h2>
-          <p className="mt-2 text-gray-300">{product.description}</p>
+          <h2 className="text-xl font-semibold text-white">Description</h2>
+          <p className="mt-2 text-white/70">{product.description}</p>
+
+          <AddToCartButton product={{ id: product.id, title: product.title, price: product.price, image }} />
         </div>
       </div>
     </main>

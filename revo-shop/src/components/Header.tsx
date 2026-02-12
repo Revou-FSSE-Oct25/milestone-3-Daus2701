@@ -1,32 +1,40 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 
 export default function Header() {
+  const pathname = usePathname();
   const { totalItems } = useCart();
 
+  const isActive = (href: string) => pathname === href;
+
   return (
-    <header className="border-b border-white/10">
-      <nav className="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/60 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between p-4">
+        <Link href="/" className="font-semibold text-white">
           Revo Shop
         </Link>
 
-        <div className="flex items-center gap-6">
-          <Link href="/">Home</Link>
-          <Link href="/about">About</Link>
+        <nav className="flex items-center gap-4 text-sm text-white/80">
+          <Link className={isActive("/") ? "text-white" : ""} href="/">
+            Home
+          </Link>
+          <Link className={isActive("/about") ? "text-white" : ""} href="/about">
+            About
+          </Link>
 
-          <Link href="/cart" className="relative">
+          <Link className={isActive("/cart") ? "text-white" : ""} href="/cart">
             Cart
             {totalItems > 0 && (
-              <span className="ml-2 inline-flex min-w-[20px] h-5 items-center justify-center rounded-full bg-white text-black text-xs px-2">
+              <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-xs text-white">
                 {totalItems}
               </span>
             )}
           </Link>
-        </div>
-      </nav>
+        </nav>
+      </div>
     </header>
   );
 }

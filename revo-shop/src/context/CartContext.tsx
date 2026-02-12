@@ -7,79 +7,55 @@ export type CartItem = {
   title: string;
   price: number;
   image?: string;
-  quantity: number;
+  qty: number;
 };
 
 type CartState = {
   items: CartItem[];
 };
 
-type CartAction =
-  | { type: "ADD"; payload: Omit<CartItem, "quantity">; quantity?: number }
-  | { type: "REMOVE"; id: number }
+type Action =
+  | { type: "ADD"; payload: Omit<CartItem, "qty">; qty?: number }
   | { type: "INC"; id: number }
   | { type: "DEC"; id: number }
-  | { type: "SET_QTY"; id: number; quantity: number }
+  | { type: "REMOVE"; id: number }
   | { type: "CLEAR" }
-  | { type: "HYDRATE"; items: CartItem[] };
+  | { type: "SET"; payload: CartItem[] };
 
-type CartContextValue = {
-  items: CartItem[];
-  addToCart: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
-  removeFromCart: (id: number) => void;
-  inc: (id: number) => void;
-  dec: (id: number) => void;
-  setQty: (id: number, quantity: number) => void;
-  clear: () => void;
+const CART_KEY = "revo_shop_cart_v1";
 
-  // derived values
-  totalItems: number;
-  subtotal: number;
-};
-
-const CartContext = createContext<CartContextValue | null>(null);
-
-const STORAGE_KEY = "revo_shop_cart_v1";
-
-function cartReducer(state: CartState, action: CartAction): CartState {
+function cartReducer(state: CartState, action: Action): CartState {
   switch (action.type) {
-    case "HYDRATE":
-      return { items: action.items };
+    case "SET":
+      return { items: action.payload };
 
     case "ADD": {
-      const qtyToAdd = Math.max(1, action.quantity ?? 1);
-      const existing = state.items.find((x) => x.id === action.payload.id);
-
-      if (existing) {
+      const qty = action.qty ?? 1;
+      const exists = state.items.find((i) => i.id === action.payload.id);
+      if (exists) {
         return {
-          items: state.items.map((x) =>
-            x.id === action.payload.id ? { ...x, quantity: x.quantity + qtyToAdd } : x
+          items: state.items.map((i) =>
+            i.id === action.payload.id ? { ...i, qty: i.qty + qty } : i
           ),
         };
       }
-
-      return { items: [...state.items, { ...action.payload, quantity: qtyToAdd }] };
+      return {
+        items: [{ ...action.payload, qty }, ...state.items],
+      };
     }
 
-    case "REMOVE":
-      return { items: state.items.filter((x) => x.id !== action.id) };
-
     case "INC":
-      return {
-        items: state.items.map((x) => (x.id === action.id ? { ...x, quantity: x.quantity + 1 } : x)),
-      };
+      return { items: state.items.map((i) => (i.id === action.id ? { ...i, qty: i.qty + 1 } : i)) };
 
     case "DEC":
       return {
         items: state.items
-          .map((x) => (x.id === action.id ? { ...x, quantity: x.quantity - 1 } : x))
-          .filter((x) => x.quantity > 0),
+          .map((i) => (i.id === action.id ? { ...i, qty: Math.max(1, i.qty - 1) } : i))
+          .filter((i) => i.qty > 0),
       };
 
-    case "SET_QTY": {
-      const qty = Math.max(1, Math.floor(action.quantity));
-      return { items: state.items.map((x) => (x.id === action.id ? { ...x, quantity: qty } : x)) };
-    }
+    case "REMOVE":
+      return { items: state.items.filter((i) => i.id !== action.id) };
 
     case "CLEAR":
       return { items: [] };
@@ -89,67 +65,64 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   }
 }
 
-function safeParseCart(raw: string | null): CartItem[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter((x) => x && typeof x.id === "number")
-      .map((x) => ({
-        id: Number(x.id),
-        title: String(x.title ?? ""),
-        price: Number(x.price ?? 0),
-        image: x.image ? String(x.image) : undefined,
-        quantity: Math.max(1, Number(x.quantity ?? 1)),
-      }));
-  } catch {
-    return [];
-  }
-}
+type CartContextValue = {
+  items: CartItem[];
+  addToCart: (item: Omit<CartItem, "qty">, qty?: number) => void;
+  inc: (id: number) => void;
+  dec: (id: number) => void;
+  remove: (id: number) => void;
+  clear: () => void;
+  totalItems: number;
+  totalPrice: number;
+};
+
+const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [] });
 
-  // Hydrate from localStorage (client-only)
+  // Load from localStorage once
   useEffect(() => {
-    const items = safeParseCart(localStorage.getItem(STORAGE_KEY));
-    dispatch({ type: "HYDRATE", items });
+    try {
+      const raw = localStorage.getItem(CART_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as CartItem[];
+      if (Array.isArray(parsed)) dispatch({ type: "SET", payload: parsed });
+    } catch {
+      // ignore
+    }
   }, []);
 
-  // Persist to localStorage
+  // Persist
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
+    try {
+      localStorage.setItem(CART_KEY, JSON.stringify(state.items));
+    } catch {
+      // ignore
+    }
   }, [state.items]);
 
-  const totalItems = useMemo(
-    () => state.items.reduce((sum, item) => sum + item.quantity, 0),
-    [state.items]
-  );
+  const value: CartContextValue = useMemo(() => {
+    const totalItems = state.items.reduce((sum, i) => sum + i.qty, 0);
+    const totalPrice = state.items.reduce((sum, i) => sum + i.qty * i.price, 0);
 
-  const subtotal = useMemo(
-    () => state.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
-    [state.items]
-  );
-
-  const value: CartContextValue = {
-    items: state.items,
-    addToCart: (item, quantity) => dispatch({ type: "ADD", payload: item, quantity }),
-    removeFromCart: (id) => dispatch({ type: "REMOVE", id }),
-    inc: (id) => dispatch({ type: "INC", id }),
-    dec: (id) => dispatch({ type: "DEC", id }),
-    setQty: (id, quantity) => dispatch({ type: "SET_QTY", id, quantity }),
-    clear: () => dispatch({ type: "CLEAR" }),
-
-    totalItems,
-    subtotal,
-  };
+    return {
+      items: state.items,
+      addToCart: (item, qty) => dispatch({ type: "ADD", payload: item, qty }),
+      inc: (id) => dispatch({ type: "INC", id }),
+      dec: (id) => dispatch({ type: "DEC", id }),
+      remove: (id) => dispatch({ type: "REMOVE", id }),
+      clear: () => dispatch({ type: "CLEAR" }),
+      totalItems,
+      totalPrice,
+    };
+  }, [state.items]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {
   const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart must be used inside <CartProvider />");
+  if (!ctx) throw new Error("useCart must be used inside <CartProvider>");
   return ctx;
 }

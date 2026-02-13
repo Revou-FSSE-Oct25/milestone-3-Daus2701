@@ -9,10 +9,16 @@ type Product = {
   images: string[];
 };
 
-const FALLBACK_IMG = "https://placehold.co/800x800/png?text=No+Image"; // png avoids svg warning
+const FALLBACK_IMG = "https://placehold.co/800x800/png?text=No+Image";
 
-export default async function ProductDetail({ params }: { params: { id: string } }) {
-  const res = await fetch(`https://api.escuelajs.co/api/v1/products/${params.id}`, {
+export default async function ProductDetail({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  const res = await fetch(`https://api.escuelajs.co/api/v1/products/${id}`, {
     cache: "no-store",
   });
 
@@ -20,12 +26,13 @@ export default async function ProductDetail({ params }: { params: { id: string }
     return (
       <main className="p-6">
         <h1 className="text-2xl font-bold">Product not found</h1>
+        <p className="mt-2 text-gray-600">Could not load product with id: {id}</p>
       </main>
     );
   }
 
   const product: Product = await res.json();
-  const image = product.images?.[0] || FALLBACK_IMG;
+  const image = product.images?.[0] ?? FALLBACK_IMG;
 
   return (
     <main className="p-6">
@@ -33,27 +40,30 @@ export default async function ProductDetail({ params }: { params: { id: string }
       <p className="mt-2 text-gray-300">${product.price}</p>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="aspect-square overflow-hidden rounded-lg bg-white/5">
+        <div className="relative aspect-square overflow-hidden rounded-lg bg-white/5">
           <Image
             src={image}
             alt={product.title}
-            width={800}
-            height={800}
-            className="h-full w-full object-cover"
-            unoptimized
+            fill
+            className="object-cover"
+            sizes="(max-width: 1024px) 100vw, 50vw"
           />
         </div>
 
         <div>
           <h2 className="text-xl font-semibold">Description</h2>
-          <p className="mt-2 text-gray-300">{product.description}</p>
+          <p className="mt-2 text-white/70">{product.description}</p>
 
-          <AddToCartButton
-            id={product.id}
-            title={product.title}
-            price={product.price}
-            image={image}
-          />
+          <div className="mt-4 max-w-sm">
+            <AddToCartButton
+              product={{
+                id: product.id,
+                title: product.title,
+                price: product.price,
+                image,
+              }}
+            />
+          </div>
         </div>
       </div>
     </main>

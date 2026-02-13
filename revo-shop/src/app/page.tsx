@@ -2,7 +2,7 @@
 
 import ProductGrid from "@/components/ProductGrid";
 import ProductGridSkeleton from "@/components/ProductGridSkeleton";
-import { useProducts } from "../hooks/useProducts"; // or "@/hooks/useProducts" if you set alias
+import { useProducts } from "../hooks/useProducts";
 
 export default function Home() {
   const { products, loading, error, refetch } = useProducts();
@@ -31,6 +31,7 @@ export default function Home() {
       )}
 
       {!loading && !error && <ProductGrid products={products.slice(0, 8)} />}
+
     </main>
   );
 }

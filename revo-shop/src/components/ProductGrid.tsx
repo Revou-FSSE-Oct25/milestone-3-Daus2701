@@ -1,4 +1,5 @@
-import ProductCard, { type Product } from "@/components/ProductCard";
+import ProductCard from "@/components/ProductCard";
+import type { Product } from "@/hooks/useProducts";
 
 export default function ProductGrid({ products }: { products: Product[] }) {
   return (

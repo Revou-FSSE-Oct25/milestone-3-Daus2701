@@ -13,10 +13,12 @@ module.exports = {
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],
   collectCoverageFrom: [
-  "src/hooks/**/*.{ts,tsx}",
-  "src/context/**/*.{ts,tsx}",
   "src/components/**/*.{ts,tsx}",
+  "src/context/**/*.{ts,tsx}",
+  "src/hooks/**/*.{ts,tsx}",
   "!src/**/*.d.ts",
-],
+  "!src/components/ProductCardSkeleton.tsx",
+  "!src/components/ProductGridSkeleton.tsx",
+  ],
 
 };

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 type Category = { id: number; name: string };
 
@@ -11,16 +12,20 @@ export default function EditProductPage() {
   const id = params.id;
   const router = useRouter();
 
+  // 🔹 data state
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 🔹 form state
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState<number>(1);
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState<number>(0);
+  const [images, setImages] = useState(""); // ⭐ HERE is the images state
 
+  // 🔹 load product + categories
   useEffect(() => {
     async function load() {
       try {
@@ -30,10 +35,12 @@ export default function EditProductPage() {
         ]);
 
         const p = prodRes.data;
+
         setTitle(p.title ?? "");
         setPrice(Number(p.price ?? 1));
         setDescription(p.description ?? "");
         setCategoryId(Number(p.category?.id ?? 0));
+        setImages(Array.isArray(p.images) ? p.images.join(", ") : "");
         setCategories(catRes.data ?? []);
       } catch {
         setError("Failed to load product");
@@ -45,41 +52,59 @@ export default function EditProductPage() {
     load();
   }, [id]);
 
+  // 🔹 save product
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
 
-    try {
-      await api.put(`/products/${id}`, {
-        title,
-        price,
-        description,
-        categoryId,
-        images: ["https://placehold.co/600x400/png"],
-      });
+    const toastId = toast.loading("Updating product...");
 
+    try {
+      const payload = {
+        title,
+        price: Number(price),
+        description,
+        categoryId: Number(categoryId),
+        images: images
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      };
+
+      await api.put(`/products/${id}`, payload);
+
+      toast.success("Product updated successfully!", { id: toastId });
       router.push("/admin/products");
       router.refresh();
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Failed to save product");
+      const msg = err?.response?.data?.message ?? "Failed to update product";
+      toast.error(msg, { id: toastId });
+      setError(msg);
     } finally {
       setSaving(false);
     }
   }
 
+  // 🔹 delete product
   async function onDelete() {
-    if (!confirm("Delete this product?")) return;
+    const confirmed = confirm("Are you sure you want to delete this product?");
+    if (!confirmed) return;
+
+    const toastId = toast.loading("Deleting product...");
 
     try {
       await api.delete(`/products/${id}`);
+      toast.success("Product deleted!", { id: toastId });
       router.push("/admin/products");
       router.refresh();
     } catch (err: any) {
-      alert(err?.response?.data?.message ?? "Failed to delete product");
+      const msg = err?.response?.data?.message ?? "Failed to delete product";
+      toast.error(msg, { id: toastId });
     }
   }
 
+  // 🔹 loading state
   if (loading) return <main className="p-6">Loading...</main>;
 
   return (
@@ -134,9 +159,18 @@ export default function EditProductPage() {
           ))}
         </select>
 
+        {/* ⭐ Images input */}
+        <input
+          className="w-full rounded border p-2 bg-transparent"
+          placeholder="Images (comma separated URLs)"
+          value={images}
+          onChange={(e) => setImages(e.target.value)}
+        />
+
         <button
           className="rounded border px-4 py-2 hover:bg-white/10"
           disabled={saving}
+          type="submit"
         >
           {saving ? "Saving..." : "Save"}
         </button>

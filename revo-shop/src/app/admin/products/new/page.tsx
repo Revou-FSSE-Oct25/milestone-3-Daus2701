@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 type Category = { id: number; name: string };
 
@@ -24,27 +25,30 @@ export default function NewProductPage() {
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
 
-    try {
-      await api.post("/products", {
-        title,
-        price,
-        description,
-        categoryId,
-        images: ["https://placehold.co/600x400/png"],
-      });
+  try {
+    await api.post("/products", {
+      title,
+      price,
+      description,
+      categoryId,
+      images: ["https://placehold.co/600x400/png"],
+    });
 
-      router.push("/admin/products");
-      router.refresh(); // dynamic UI update
-    } catch (err: any) {
-      setError(err?.response?.data?.message ?? "Failed to create product");
-    } finally {
-      setLoading(false);
-    }
+    toast.success("Product created successfully!");
+    router.push("/admin/products");
+    router.refresh();
+  } catch (err: any) {
+    const msg = err?.response?.data?.message ?? "Failed to create product";
+    toast.error(msg);
+    setError(msg);
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <main className="p-6 max-w-2xl">

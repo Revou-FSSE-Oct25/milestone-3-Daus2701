@@ -4,7 +4,8 @@ module.exports = {
   testEnvironment: "jsdom",
 
   moduleNameMapper: {
-    "^@/(.*)$": "<rootDir>/src/$1",
+  "^@/(.*)$": "<rootDir>/src/$1",
+  "^next-auth/react$": "<rootDir>/src/__mocks__/next-auth-react.tsx",
   },
 
   setupFilesAfterEnv: ["<rootDir>/jest.setup.tsx"],

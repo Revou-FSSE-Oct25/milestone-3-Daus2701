@@ -1,14 +1,14 @@
-import { render } from "@testing-library/react";
-import Providers from "../Providers";
+import { render, screen } from "@testing-library/react";
+import Providers from "@/context/Providers";
 
 describe("Providers", () => {
   it("renders children", () => {
-    const { getByText } = render(
+    render(
       <Providers>
         <div>hello</div>
       </Providers>
     );
 
-    expect(getByText("hello")).toBeInTheDocument();
+    expect(screen.getByText("hello")).toBeInTheDocument();
   });
 });

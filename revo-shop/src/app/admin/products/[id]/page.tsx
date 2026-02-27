@@ -1,32 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 type Category = { id: number; name: string };
 
+type Product = {
+  id: number;
+  title: string;
+  price: number;
+  description: string;
+  images?: string[];
+  category?: { id: number };
+};
+
 export default function EditProductPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const router = useRouter();
 
-  // 🔹 data state
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔹 form state
+  // Form states
   const [title, setTitle] = useState("");
   const [price, setPrice] = useState<number>(1);
   const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState<number>(0);
-  const [images, setImages] = useState(""); // ⭐ HERE is the images state
+  const [categoryId, setCategoryId] = useState<string>(""); // string so "Select category" works
+  const [imagesText, setImagesText] = useState(""); // comma-separated input
 
-  // 🔹 load product + categories
+  const imagesArray = useMemo(() => {
+    const arr = imagesText
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    return arr.length > 0 ? arr : ["https://placehold.co/600x400/png"];
+  }, [imagesText]);
+
   useEffect(() => {
+    let mounted = true;
+
     async function load() {
       try {
         const [prodRes, catRes] = await Promise.all([
@@ -34,14 +52,26 @@ export default function EditProductPage() {
           api.get("/categories"),
         ]);
 
-        const p = prodRes.data;
+        if (!mounted) return;
 
-        setTitle(p.title ?? "");
-        setPrice(Number(p.price ?? 1));
-        setDescription(p.description ?? "");
-        setCategoryId(Number(p.category?.id ?? 0));
-        setImages(Array.isArray(p.images) ? p.images.join(", ") : "");
-        setCategories(catRes.data ?? []);
+        const product: Product = prodRes.data;
+        const list = Array.isArray(catRes.data) ? catRes.data : [];
+
+        setCategories(list);
+
+        setTitle(product.title ?? "");
+        setPrice(Number(product.price ?? 1));
+        setDescription(product.description ?? "");
+
+        // Keep Select category correct:
+        // - if product has category, use it
+        // - otherwise keep "" so user must choose
+        const cid = product.category?.id;
+        setCategoryId(cid ? String(cid) : "");
+
+        // Images input
+        const imgs = Array.isArray(product.images) ? product.images : [];
+        setImagesText(imgs.join(", "));
       } catch {
         setError("Failed to load product");
       } finally {
@@ -50,26 +80,36 @@ export default function EditProductPage() {
     }
 
     load();
+
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
-  // 🔹 save product
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
 
+    // Validate category
+    const isValidCategory = categories.some((c) => c.id === Number(categoryId));
+    if (!isValidCategory) {
+      const msg = "Please select a valid category";
+      toast.error(msg);
+      setError(msg);
+      setSaving(false);
+      return;
+    }
+
     const toastId = toast.loading("Updating product...");
 
     try {
       const payload = {
-        title,
+        title: title.trim(),
         price: Number(price),
-        description,
+        description: description.trim(),
         categoryId: Number(categoryId),
-        images: images
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        images: imagesArray,
       };
 
       await api.put(`/products/${id}`, payload);
@@ -86,7 +126,6 @@ export default function EditProductPage() {
     }
   }
 
-  // 🔹 delete product
   async function onDelete() {
     const confirmed = confirm("Are you sure you want to delete this product?");
     if (!confirmed) return;
@@ -104,7 +143,6 @@ export default function EditProductPage() {
     }
   }
 
-  // 🔹 loading state
   if (loading) return <main className="p-6">Loading...</main>;
 
   return (
@@ -149,28 +187,29 @@ export default function EditProductPage() {
         <select
           className="w-full rounded border p-2 bg-black"
           value={categoryId}
-          onChange={(e) => setCategoryId(Number(e.target.value))}
+          onChange={(e) => setCategoryId(e.target.value)}
         >
-          <option value={0}>Select category</option>
+          <option value="" disabled>
+            Select category
+          </option>
+
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>
+            <option key={c.id} value={String(c.id)}>
               {c.name}
             </option>
           ))}
         </select>
 
-        {/* ⭐ Images input */}
         <input
           className="w-full rounded border p-2 bg-transparent"
-          placeholder="Images (comma separated URLs)"
-          value={images}
-          onChange={(e) => setImages(e.target.value)}
+          placeholder="Images (comma-separated URLs)"
+          value={imagesText}
+          onChange={(e) => setImagesText(e.target.value)}
         />
 
         <button
-          className="rounded border px-4 py-2 hover:bg-white/10"
-          disabled={saving}
-          type="submit"
+          className="rounded border px-4 py-2 hover:bg-white/10 disabled:opacity-50"
+          disabled={saving || categoryId === ""}
         >
           {saving ? "Saving..." : "Save"}
         </button>
